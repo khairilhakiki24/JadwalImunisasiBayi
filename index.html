@@ -1,97 +1,114 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Jadwal Imunisasi Bayi</title>
-    <!-- Memuat Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-    <!-- Memuat jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Memuat jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    <!-- Memuat html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
-    <script>
-        var immunizations = [];
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jadwal Imunisasi Bayi</title>
+<!-- Memuat Bootstrap CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+<!-- Memuat jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Memuat jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<!-- Memuat html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+<style>
+    /* Custom CSS untuk membuat tampilan lebih responsif */
+    .btn-group {
+        margin-bottom: 10px;
+    }
 
-        $(document).ready(function() {
-            // Memuat data yang tersimpan saat halaman dimuat
-            var savedImmunizations = localStorage.getItem('immunizations');
-            if(savedImmunizations) {
-                immunizations = JSON.parse(savedImmunizations);
-                displayImmunizations();
-            }
+    .table-responsive {
+        margin-top: 20px;
+    }
+
+    .import-export-btn {
+        margin-top: 10px;
+    }
+</style>
+<script>
+    var immunizations = [];
+
+    $(document).ready(function() {
+        // Memuat data yang tersimpan saat halaman dimuat
+        var savedImmunizations = localStorage.getItem('immunizations');
+        if(savedImmunizations) {
+            immunizations = JSON.parse(savedImmunizations);
+            displayImmunizations();
+        }
+    });
+
+    function addImmunization(nama, usia) {
+        var tanggal = $("#tanggal").val();
+        if (tanggal === "") {
+            alert("Mohon isi tanggal.");
+        } else {
+            immunizations.push({ nama: nama, usia: usia, tanggal: tanggal });
+            displayImmunizations();
+            // Menyimpan data ke penyimpanan lokal
+            localStorage.setItem('immunizations', JSON.stringify(immunizations));
+        }
+    }
+
+    function displayImmunizations() {
+        $("#tabelImunisasi").empty();
+        immunizations.forEach(function(immunisasi) {
+            $("#tabelImunisasi").append("<tr><td>" + immunisasi.nama + "</td><td>" + immunisasi.usia + "</td><td>" + immunisasi.tanggal + "</td></tr>");
         });
+    }
 
-        function addImmunization(nama, usia) {
-            var tanggal = $("#tanggal").val();
-            if (tanggal === "") {
-                alert("Mohon isi tanggal.");
-            } else {
-                immunizations.push({ nama: nama, usia: usia, tanggal: tanggal });
-                displayImmunizations();
-                // Menyimpan data ke penyimpanan lokal
-                localStorage.setItem('immunizations', JSON.stringify(immunizations));
-            }
+    function clearImmunizations() {
+        if (confirm("Apakah Anda yakin ingin menghapus semua data imunisasi?")) {
+            immunizations = [];
+            localStorage.removeItem('immunizations');
+            displayImmunizations();
         }
+    }
 
-        function displayImmunizations() {
-            $("#tabelImunisasi").empty();
-            immunizations.forEach(function(immunisasi) {
-                $("#tabelImunisasi").append("<tr><td>" + immunisasi.nama + "</td><td>" + immunisasi.usia + "</td><td>" + immunisasi.tanggal + "</td></tr>");
-            });
-        }
+    function downloadSchedule() {
+        html2canvas(document.querySelector("#tabelImunisasi")).then(canvas => {
+            var pdf = new jsPDF('p', 'mm', 'a4');
+            pdf.text("Jadwal Imunisasi Bayi", 10, 10);
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 20, 180, 0);
+            pdf.save("Jadwal_Imunisasi_Bayi.pdf");
+        });
+    }
 
-        function clearImmunizations() {
-            if (confirm("Apakah Anda yakin ingin menghapus semua data imunisasi?")) {
-                immunizations = [];
-                localStorage.removeItem('immunizations');
-                displayImmunizations();
-            }
-        }
+    function exportData() {
+        var jsonData = JSON.stringify(immunizations);
+        var blob = new Blob([jsonData], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = "jadwal_imunisasi.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
 
-        function downloadSchedule() {
-            html2canvas(document.querySelector("#tabelImunisasi")).then(canvas => {
-                var pdf = new jsPDF('p', 'mm', 'a4');
-                pdf.text("Jadwal Imunisasi Bayi", 10, 10);
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 20, 180, 0);
-                pdf.save("Jadwal_Imunisasi_Bayi.pdf");
-            });
-        }
-
-        function exportData() {
-            var jsonData = JSON.stringify(immunizations);
-            var blob = new Blob([jsonData], { type: "application/json" });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = "jadwal_imunisasi.json";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function importData(event) {
-            var file = event.target.files[0];
-            var reader = new FileReader();
-            reader.onload = function(event) {
-                var importedData = JSON.parse(event.target.result);
-                immunizations = importedData;
-                localStorage.setItem('immunizations', JSON.stringify(immunizations));
-                displayImmunizations();
-            };
-            reader.readAsText(file);
-        }
-    </script>
+    function importData(event) {
+        var file = event.target.files[0];
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            var importedData = JSON.parse(event.target.result);
+            immunizations = importedData;
+            localStorage.setItem('immunizations', JSON.stringify(immunizations));
+            displayImmunizations();
+        };
+        reader.readAsText(file);
+    }
+</script>
 </head>
 <body>
-    <div class="container mt-4">
-        <h1>Jadwal Imunisasi Bayi</h1>
-        <p>Masukkan data jadwal imunisasi:</p>
-        <div class="form-group">
-            <label for="tanggal">Tanggal:</label>
-            <input type="date" id="tanggal" class="form-control">
-        </div>
-        <button class="btn btn-primary" onclick="addImmunization('Hepatitis B', 'Usia bayi 0 bulan')">Hepatitis B</button>
+<div class="container mt-4">
+    <h1 class="text-center">Jadwal Imunisasi Bayi</h1>
+    <p class="lead text-center">Masukkan data jadwal imunisasi:</p>
+    <div class="form-group">
+        <label for="tanggal">Tanggal:</label>
+        <input type="date" id="tanggal" class="form-control">
+    </div>
+    <div class="btn-group d-flex justify-content-center flex-wrap">
+         <button class="btn btn-primary" onclick="addImmunization('Hepatitis B', 'Usia bayi 0 bulan')">Hepatitis B</button>
         <button class="btn btn-primary" onclick="addImmunization('BCG', 'Usia bayi 0-1 bulan')">BCG</button>
 		<button class="btn btn-primary" onclick="addImmunization('Polio Tetes 1', 'Usia bayi 0-1 bulan')">Polio Tetes 1</button>
 		<button class="btn btn-primary" onclick="addImmunization('DPT-HB-Hib 1', 'Usia bayi 2 bulan')">DPT-HB-Hib 1</button>
@@ -113,8 +130,10 @@
 		<button class="btn btn-primary" onclick="addImmunization('DPT-HB-Hib Lanjutan', 'Usia bayi 13 bulan')">DPT-HB-Hib Lanjutan</button>
 		<button class="btn btn-primary" onclick="addImmunization('Campak-Rubella (MR) Lanjutan', 'Usia bayi 13 bulan')">Campak-Rubella (MR) Lanjutan</button>
         <!-- Tambahkan tombol-tombol imunisasi lainnya -->
-        <hr>
-        <h2>Jadwal Imunisasi</h2>
+    </div>
+    <hr>
+    <h2 class="text-center">Jadwal Imunisasi</h2>
+    <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
@@ -126,14 +145,17 @@
             <tbody id="tabelImunisasi">
             </tbody>
         </table>
-        <div class="row">
-            <div class="col">
-                <button class="btn btn-danger" onclick="clearImmunizations()">Bersihkan</button>
-                <button class="btn btn-success" onclick="downloadSchedule()">Unduh Jadwal</button>
-                <button class="btn btn-info" onclick="exportData()">Ekspor Data</button>
-                <label for="importDataInput" class="btn btn-warning">Impor Data<input type="file" id="importDataInput" style="display: none;" accept=".json" onchange="importData(event)"></label>
-            </div>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <button class="btn btn-danger" onclick="clearImmunizations()">Bersihkan</button>
+            <button class="btn btn-success" onclick="downloadSchedule()">Unduh Jadwal</button>
+        </div>
+        <div class="col-md-6 text-center import-export-btn">
+            <button class="btn btn-info" onclick="exportData()">Ekspor Data</button>
+            <label for="importDataInput" class="btn btn-warning">Impor Data<input type="file" id="importDataInput" style="display: none;" accept=".json" onchange="importData(event)"></label>
         </div>
     </div>
+</div>
 </body>
 </html>
